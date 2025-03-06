@@ -1,8 +1,33 @@
 #include <iostream>
-#include <string>
+#include <thread>
+#include <cstring>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+
+void handle_receive(int socket) {
+    char buffer[1024];
+    while (true) {
+        memset(buffer, 0, sizeof(buffer));
+        int valread = read(socket, buffer, 1024);
+        if (valread <= 0) {
+            std::cerr << "Server disconnected or read failed" << std::endl;
+            break;
+        }
+        std::cout << "Message from server: " << buffer << std::endl;
+    }
+}
+
+void handle_send(int socket) {
+    std::string message;
+    while (true) {
+        std::getline(std::cin, message);
+        if (message == "exit") {
+            break;
+        }
+        send(socket, message.c_str(), message.length(), 0);
+    }
+}
 
 int main() {
     int sock = 0;
@@ -32,16 +57,13 @@ int main() {
         return -1;
     }
 
-    // Continuously read user input and send it to the server
-    std::string message;
-    while (true) {
-        std::cout << "Enter message: ";
-        std::getline(std::cin, message);
-        if (message == "exit") {
-            break;
-        }
-        send(sock, message.c_str(), message.length(), 0);
-    }
+    // Create threads for sending and receiving messages
+    std::thread receive_thread(handle_receive, sock);
+    std::thread send_thread(handle_send, sock);
+
+    // Wait for threads to finish
+    receive_thread.join();
+    send_thread.join();
 
     // Close the socket
     close(sock);

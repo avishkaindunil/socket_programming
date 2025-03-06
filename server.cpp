@@ -1,16 +1,39 @@
 #include <iostream>
-#include <string>
+#include <thread>
+#include <cstring>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include <cstring>
+
+void handle_receive(int socket) {
+    char buffer[1024];
+    while (true) {
+        memset(buffer, 0, sizeof(buffer));
+        int valread = read(socket, buffer, 1024);
+        if (valread <= 0) {
+            std::cerr << "Client disconnected or read failed" << std::endl;
+            break;
+        }
+        std::cout << "Message from client: " << buffer << std::endl;
+    }
+}
+
+void handle_send(int socket) {
+    std::string message;
+    while (true) {
+        std::getline(std::cin, message);
+        if (message == "exit") {
+            break;
+        }
+        send(socket, message.c_str(), message.length(), 0);
+    }
+}
 
 int main() {
     int server_fd, new_socket;
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
-    char buffer[1024] = {0};
 
     // Creating socket file descriptor
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -55,16 +78,13 @@ int main() {
 
     std::cout << "Connection established" << std::endl;
 
-    // Continuously read and print messages from the client
-    while (true) {
-        memset(buffer, 0, sizeof(buffer));
-        int valread = read(new_socket, buffer, 1024);
-        if (valread <= 0) {
-            std::cerr << "Read failed or client disconnected" << std::endl;
-            break;
-        }
-        std::cout << "Message from client: " << buffer << std::endl;
-    }
+    // Create threads for sending and receiving messages
+    std::thread receive_thread(handle_receive, new_socket);
+    std::thread send_thread(handle_send, new_socket);
+
+    // Wait for threads to finish
+    receive_thread.join();
+    send_thread.join();
 
     // Close the socket
     close(new_socket);
