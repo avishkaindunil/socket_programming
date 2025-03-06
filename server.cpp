@@ -14,13 +14,16 @@ void handle_receive(int socket) {
             std::cerr << "Client disconnected or read failed" << std::endl;
             break;
         }
-        std::cout << "Message from client: " << buffer << std::endl;
+        std::cout << "\nMessage from client: " << buffer << std::endl;
+        std::cout << "Enter your message: ";
+        std::cout.flush();
     }
 }
 
 void handle_send(int socket) {
     std::string message;
     while (true) {
+        std::cout << "Enter your message: ";
         std::getline(std::cin, message);
         if (message == "exit") {
             break;
